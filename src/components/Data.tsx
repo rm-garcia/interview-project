@@ -7,10 +7,11 @@ import { SampleData } from "api/types";
 import { useQuery } from "react-query"; // handles loading and error states
 // import { useEffect, useState } from "react";
 import axios from 'axios'; // HTTP client library
+import { useState } from 'react'; // state management
 
 // priority order object
 const PRIORITY_ORDER = {
-  urgent: 1,
+  urgent: 1, // additional priority extra use case
   high: 2,
   normal: 3,
   low: 4,
@@ -24,6 +25,9 @@ const PRIORITY_ORDER = {
      * */
 
 function Data() {
+    // Add filter state
+    const [showHighPriorityOpen, setShowHighPriorityOpen] = useState(false);
+
     const { data, isLoading, error } = useQuery<SampleData>("serviceDesk", // query Key
         async () => { // query function
             const { data } = await axios.get<SampleData>('/api/data');
@@ -36,44 +40,75 @@ function Data() {
     if (error) return <div>Error loading data</div>;
     if (!data) return null;
 
-    const sortedResults = [...data.results].sort((a, b) => { // new array sorted .sort()
+    let sortedResults = [...data.results].sort((a, b) => { // new array sorted .sort()
         return (PRIORITY_ORDER[a.priority as keyof typeof PRIORITY_ORDER] || 999) - // 999 fallback for undefined
                (PRIORITY_ORDER[b.priority as keyof typeof PRIORITY_ORDER] || 999);
     });
 
+    // filter results if active
+    if (showHighPriorityOpen) {
+        sortedResults = sortedResults.filter(issue =>  // .filter method = new array with filterd eliments
+            (issue.priority === 'high' || issue.priority === 'urgent') &&
+            issue.status.toLowerCase() === 'open'
+        );
+    }
+
     return (
-        <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Priority</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Subject</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Assignee</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                    {sortedResults.map((issue) => (
-                        <tr key={issue.id}>
-                            <td className="whitespace-nowrap px-6 py-4">
-                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                                    issue.priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                                    issue.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                                    issue.priority === 'normal' ? 'bg-blue-100 text-blue-800' :
-                                    'bg-gray-100 text-gray-800'
-                                }`}>
-                                    {issue.priority}
-                                </span>
-                            </td>
-                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{issue.type}</td>
-                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{issue.status}</td>
-                            <td className="px-6 py-4 text-sm text-gray-900">{issue.subject}</td>
-                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{issue.assignee_id}</td>
+        <div>
+            {/* filter button */}
+            <div className="mb-4">
+                <button
+                    onClick={() => setShowHighPriorityOpen(!showHighPriorityOpen)}
+                    className={`rounded px-4 py-2 ${
+                        showHighPriorityOpen
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-700'
+                    }`}
+                >
+                    {showHighPriorityOpen ? 'Show All Issues' : 'Show High Priority Open Issues'}
+                </button>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Priority</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Subject</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Assignee</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                        {sortedResults.map((issue) => (
+                            <tr key={issue.id}>
+                                <td className="whitespace-nowrap px-6 py-4">
+                                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                                        issue.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                                        issue.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                        issue.priority === 'normal' ? 'bg-blue-100 text-blue-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    }`}>
+                                        {issue.priority}
+                                    </span>
+                                </td>
+                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{issue.type}</td>
+                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{issue.status}</td>
+                                <td className="px-6 py-4 text-sm text-gray-900">{issue.subject}</td>
+                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{issue.assignee_id}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+
+                {/* redundant use case (no results) */}
+                {showHighPriorityOpen && sortedResults.length === 0 && (
+                    <div className="py-4 text-center text-gray-500">
+                        No high priority open issues found
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
