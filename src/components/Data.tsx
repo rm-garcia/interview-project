@@ -2,6 +2,7 @@
 // useQuery: https://jhaharsh878.medium.com/effortless-data-handling-in-react-a-deep-dive-into-usemutation-and-usequery-5aa405b9dc6d#:~:text=Difference%20between%20useState%20and%20useQuery&text=useState%20is%20like%20a%20simple,a%20smart%20library%20management%20system.
 // keyof: https://stackoverflow.com/questions/55377365/what-does-keyof-typeof-mean-in-typescript
 // table tailwind: https://stackoverflow.com/questions/76203405/table-overflow-on-container-div
+// .reduce: https://stackoverflow.com/questions/70964766/type-problems-with-reduce-in-typescript
 
 import { SampleData } from "api/types";
 import { useQuery } from "react-query"; // handles loading and error states
@@ -40,6 +41,33 @@ function Data() {
     if (error) return <div>Error loading data</div>;
     if (!data) return null;
 
+    // calculations type distribution - .reduce array method - processes each element and accumulates a result (string keys and number values)
+    const typeDistribution = data.results.reduce((acc: {[key: string]: number}, issue) => { // object keys = priority levels & values = counts
+        acc[issue.type] = (acc[issue.type] || 0) + 1; // type = (undefined) or 0 incrment
+        return acc;
+    }, {});
+
+    // calculations priority distribution
+    const priorityDistribution = data.results.reduce((acc: {[key: string]: number}, issue) => { // object keys = priority levels and values = counts
+        acc[issue.priority] = (acc[issue.priority] || 0) + 1; // priority = (undefined) or 0 incrment
+        return acc;
+    }, {});
+
+    // percentage type
+    const total = data.results.length; // total issues
+    const typePercentages = Object.entries(typeDistribution).map(([type, count]) => ({ // converts to array of [key, value] pairs
+        // map transforms entrys into a new object with
+        type,
+        percentage: ((count / total) * 100).toFixed(1)
+    }));
+
+    // percentages priority
+    const priorityPercentages = Object.entries(priorityDistribution).map(([priority, count]) => ({ // converts to array of [key, value] pairs
+        // map transforms entrys into a new object with
+        priority,
+        percentage: ((count / total) * 100).toFixed(1)
+    }));
+
     let sortedResults = [...data.results].sort((a, b) => { // new array sorted .sort()
         return (PRIORITY_ORDER[a.priority as keyof typeof PRIORITY_ORDER] || 999) - // 999 fallback for undefined
                (PRIORITY_ORDER[b.priority as keyof typeof PRIORITY_ORDER] || 999);
@@ -66,6 +94,30 @@ function Data() {
 
     return (
         <div>
+            <div className="mb-4">
+                <h2 className="mb-2 text-xl font-bold">Issue Type Distribution</h2>
+                <div className="grid grid-cols-4 gap-4">
+                    {typePercentages.map(({ type, percentage }) => (
+                        <div key={type} className="rounded bg-gray-100 p-4">
+                            <div className="font-semibold">{type}</div>
+                            <div className="text-2xl">{percentage}%</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="mb-4">
+                <h2 className="mb-2 text-xl font-bold">Priority Distribution</h2>
+                <div className="grid grid-cols-4 gap-4">
+                    {priorityPercentages.map(({ priority, percentage }) => (
+                        <div key={priority} className="rounded bg-gray-100 p-4">
+                            <div className="font-semibold">{priority}</div>
+                            <div className="text-2xl">{percentage}%</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
             {/* filter button */}
             <div className="mb-4 flex items-center gap-4">
                 <button
@@ -79,7 +131,7 @@ function Data() {
                     {showHighPriorityOpen ? 'Show All Issues' : 'Show High Priority Open Issues'}
                 </button>
 
-                <div className="max-w-md flex-1">
+                <div className="max-w-fit flex-1">
                     <input
                         type="text"
                         placeholder="Search by organization..."
