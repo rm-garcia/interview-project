@@ -25,8 +25,8 @@ const PRIORITY_ORDER = {
      * */
 
 function Data() {
-    // Add filter state
-    const [showHighPriorityOpen, setShowHighPriorityOpen] = useState(false);
+    const [showHighPriorityOpen, setShowHighPriorityOpen] = useState(false); // filter state defult f
+    const [searchTerm, setSearchTerm] = useState('');
 
     const { data, isLoading, error } = useQuery<SampleData>("serviceDesk", // query Key
         async () => { // query function
@@ -46,17 +46,28 @@ function Data() {
     });
 
     // filter results if active
-    if (showHighPriorityOpen) {
-        sortedResults = sortedResults.filter(issue =>  // .filter method = new array with filterd eliments
-            (issue.priority === 'high' || issue.priority === 'urgent') &&
-            issue.status.toLowerCase() === 'open'
-        );
-    }
+    sortedResults = sortedResults
+        // high priority + open
+        .filter(issue => {
+            if (showHighPriorityOpen) {
+                return (issue.priority === 'high' || issue.priority === 'urgent') &&
+                       issue.status.toLowerCase() === 'open';
+            }
+            return true;
+        })
+        // organisation search
+        .filter(issue => {
+            if (searchTerm) {
+                return issue.organization_id.toLowerCase()
+                    .includes(searchTerm.toLowerCase());
+            }
+            return true;
+        });
 
     return (
         <div>
             {/* filter button */}
-            <div className="mb-4">
+            <div className="mb-4 flex items-center gap-4">
                 <button
                     onClick={() => setShowHighPriorityOpen(!showHighPriorityOpen)}
                     className={`rounded px-4 py-2 ${
@@ -67,6 +78,16 @@ function Data() {
                 >
                     {showHighPriorityOpen ? 'Show All Issues' : 'Show High Priority Open Issues'}
                 </button>
+
+                <div className="max-w-md flex-1">
+                    <input
+                        type="text"
+                        placeholder="Search by organization..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full rounded border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
+                    />
+                </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -102,10 +123,10 @@ function Data() {
                     </tbody>
                 </table>
 
-                {/* redundant use case (no results) */}
-                {showHighPriorityOpen && sortedResults.length === 0 && (
+                {/* updated. warning message search results */}
+                {sortedResults.length === 0 && (
                     <div className="py-4 text-center text-gray-500">
-                        No high priority open issues found
+                        No matching issues found
                     </div>
                 )}
             </div>
